@@ -1,0 +1,20 @@
+version: 1
+
+rocks:
+  - name: indico
+    source: indico_rock
+  - name: indico-nginx
+    source: nginx_rock
+
+charms:
+  - name: indico
+    source: .
+    extra_pytest_args:
+      - "--ignore=tests/integration/test_saml.py"
+    resources:
+      indico-image:
+        type: oci-image
+        rock: indico
+      indico-nginx-image:
+        type: oci-image
+        rock: indico-nginx

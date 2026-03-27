@@ -1,0 +1,13 @@
+name: MVP integration tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mvp-integration-tests:
+    uses: javierdelapuente/mvp-workflows/.github/workflows/mvp-integration-tests.yaml@main
+    secrets: inherit
