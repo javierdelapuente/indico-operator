@@ -8,9 +8,8 @@ providers:
   microk8s:
     enable: true
     bootstrap: true
+    channel: latest/stable
     addons:
       - dns
-      - ingress
+      - storage
       - rbac
-      - hostpath-storage
-      - registry

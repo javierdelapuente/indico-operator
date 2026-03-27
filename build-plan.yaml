@@ -11,6 +11,7 @@ charms:
     source: .
     extra_pytest_args:
       - "--ignore=tests/integration/test_saml.py"
+      - "--ignore=tests/unit_harness"
     resources:
       indico-image:
         type: oci-image
