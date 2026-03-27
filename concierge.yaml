@@ -13,3 +13,4 @@ providers:
       - dns
       - storage
       - rbac
+      - registry
