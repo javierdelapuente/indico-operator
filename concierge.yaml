@@ -9,6 +9,9 @@ providers:
     enable: true
     bootstrap: true
     channel: latest/stable
+    bootstrap-constraints:
+      mem: "4G"
+      root-disk: "10G"
     addons:
       - dns
       - storage
