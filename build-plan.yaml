@@ -1,5 +1,9 @@
 version: 1
 
+extra_prepull_images:
+  - ghcr.io/canonical/charmed-postgresql:14.22-22.04_edge
+  - ghcr.io/canonical/charmed-redis:7.2.5-22.04-edge
+
 rocks:
   - name: indico
     source: indico_rock
