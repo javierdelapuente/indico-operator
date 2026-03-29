@@ -1,0 +1,113 @@
+project: indico
+
+backends:
+  lxdvm:
+    type: adhoc
+    allocate: |
+      VM_NAME="spread-lxdvm-${RANDOM}"
+      lxc launch --vm ubuntu:22.04 "$VM_NAME" \
+          -c limits.cpu=4 -c limits.memory=8GiB -d root,size=20GiB
+      while ! lxc exec "$VM_NAME" -- true &>/dev/null; do sleep 0.5; done
+      lxc exec "$VM_NAME" -- bash -c "
+          sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          printf 'PermitRootLogin yes\nPasswordAuthentication yes\n' > /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+          echo root:${SPREAD_PASSWORD} | chpasswd
+          systemctl restart ssh
+      "
+      ADDR=""
+      while [ -z "$ADDR" ]; do
+          ADDR=$(lxc ls -f csv | grep "^${VM_NAME}" | cut -d, -f3 | cut -d' ' -f1)
+          sleep 0.5
+      done
+      ADDRESS "$ADDR"
+    discard: |
+      instance=$(lxc ls -f csv | grep ",${SPREAD_SYSTEM_ADDRESS} " | cut -f1 -d,)
+      [ -n "$instance" ] && lxc delete -f "$instance" || true
+    prepare: |
+      snap wait system seed.loaded
+      snap refresh --hold || true
+    restore: |
+      rm -rf "$SPREAD_PATH"
+      mkdir -p "$SPREAD_PATH"
+    systems:
+      - ubuntu-22.04:
+          workers: 3
+
+  ci:
+    type: adhoc
+    allocate: |
+      if [ -z "${CI:-}" ]; then
+          echo "The ci backend is intended for use in CI environments only." >&2
+          exit 1
+      fi
+      sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+      sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+      if [ -d /etc/ssh/sshd_config.d ]; then
+          printf 'PermitRootLogin yes\nPasswordAuthentication yes\n' \
+              | sudo tee /etc/ssh/sshd_config.d/00-spread.conf >/dev/null
+      fi
+      sudo systemctl daemon-reload
+      sudo systemctl restart ssh
+      echo "root:${SPREAD_PASSWORD}" | sudo chpasswd
+      ADDRESS localhost
+    discard: |
+      true
+    prepare: |
+      snap wait system seed.loaded || true
+    restore: |
+      true
+    systems:
+      - ubuntu-22.04:
+          workers: 1
+
+path: /root/project
+
+suites:
+  integration/:
+    summary: Integration tests
+    kill-timeout: 90m
+    warn-timeout: 10m
+    environment:
+      MODULE/test_actions: test_actions
+      MODULE/test_charm: test_charm
+      MODULE/test_loki: test_loki
+      MODULE/test_s3: test_s3
+      MODULE/test_saml: test_saml
+    prepare: |
+      cd "$SPREAD_PATH"
+
+      # Install tools
+      snap install yq
+      snap install --classic concierge
+      apt-get update -qq && apt-get install -y python3-pip python3-venv skopeo
+      pip3 install tox tox-uv
+
+      # Provision (juju + microk8s/lxd via concierge)
+      .mvp-workflows/provision .
+
+      # Configure microk8s local registry and push rocks (if applicable)
+      if command -v microk8s >/dev/null 2>&1; then
+        HOSTS_DIR=/var/snap/microk8s/current/args/certs.d/localhost:32000
+        mkdir -p "$HOSTS_DIR"
+        printf 'server = "http://localhost:32000"\n\n[host."http://localhost:32000"]\n  capabilities = ["pull", "resolve"]\n' \
+          > "$HOSTS_DIR/hosts.toml"
+        systemctl restart snap.microk8s.daemon-containerd.service
+        microk8s status --wait-ready --timeout=120
+        # Wait for registry
+        for i in $(seq 1 30); do
+          curl -sf --max-time 3 http://localhost:32000/v2/ >/dev/null 2>&1 && break || true
+          sleep 5
+        done
+        # Push all rocks to localhost:32000
+        rock_count=$(yq '.rocks | length' "$SPREAD_PATH/build-output.yaml" 2>/dev/null || echo 0)
+        for i in $(seq 0 $((rock_count - 1))); do
+          rock_file=$(yq ".rocks[$i].output.file" "$SPREAD_PATH/build-output.yaml" 2>/dev/null || true)
+          image_ref=$(yq ".rocks[$i].output.image" "$SPREAD_PATH/build-output.yaml" 2>/dev/null || true)
+          if [[ -n "$rock_file" && "$rock_file" != "null" && -n "$image_ref" && "$image_ref" != "null" ]]; then
+            echo "  pushing $rock_file -> $image_ref"
+            skopeo copy --dest-tls-verify=false "oci-archive:${SPREAD_PATH}/${rock_file}" "docker://${image_ref}"
+            microk8s ctr images pull --plain-http "${image_ref}"
+          fi
+        done
+      fi

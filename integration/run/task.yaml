@@ -1,0 +1,6 @@
+summary: Run $MODULE integration test
+kill-timeout: 90m
+execute: |
+  set -euo pipefail
+  cd "$SPREAD_PATH"
+  .mvp-workflows/test . --module "$MODULE"
