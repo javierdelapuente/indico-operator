@@ -2,3 +2,11 @@
 *.py[cod]
 *.charm
 /.github
+/indico_rock
+/nginx_rock
+/artifacts.yaml
+/artifacts-generated.yaml
+/concierge.yaml
+/spread.yaml
+/spread.yaml.bak
+/load_tests

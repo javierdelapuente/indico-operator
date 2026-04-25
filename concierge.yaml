@@ -1,0 +1,22 @@
+juju:
+  channel: "2.9/stable"
+  model-defaults:
+    test-mode: "true"
+    automatically-retry-hooks: "false"
+
+providers:
+  microk8s:
+    enable: true
+    bootstrap: true
+    addons:
+      - dns
+      - hostpath-storage
+      - ingress
+      - metallb:10.64.140.43-10.64.140.49
+
+host:
+  snaps:
+    charmcraft:
+    jq:
+    yq:
+    rockcraft:
