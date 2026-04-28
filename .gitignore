@@ -11,6 +11,8 @@ __pycache__/
 .mypy_cache
 *.egg-info/
 */*.rock
+.opcli-spread-*/
+.spread-reuse.*.yaml
 
 # BEGIN VALE WORKFLOW IGNORE
 .vale/styles/*

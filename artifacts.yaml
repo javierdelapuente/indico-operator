@@ -1,0 +1,17 @@
+version: 1
+rocks:
+- name: indico
+  rockcraft-yaml: indico_rock/rockcraft.yaml
+- name: indico-nginx
+  rockcraft-yaml: nginx_rock/rockcraft.yaml
+charms:
+- name: indico
+  charmcraft-yaml: charmcraft.yaml
+  resources:
+    indico-image:
+      type: oci-image
+      rock: indico
+    indico-nginx-image:
+      type: oci-image
+      rock: indico-nginx
+snaps: []

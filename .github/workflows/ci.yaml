@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 15 * * SAT"
+
+jobs:
+  integration-test:
+    uses: javierdelapuente/operator-ci-poc/.github/workflows/integration-test.yml@main
+    permissions:
+      contents: read
+      packages: write
+      actions: read

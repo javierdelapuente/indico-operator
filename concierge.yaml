@@ -1,0 +1,25 @@
+juju:
+  channel: "2.9/stable"
+  extra-bootstrap-args: "--config caas-image-repo=jujusolutions"
+  model-defaults:
+    test-mode: "true"
+    automatically-retry-hooks: "false"
+
+providers:
+  microk8s:
+    enable: true
+    bootstrap: true
+    channel: "1.29/stable"
+    addons:
+      - dns
+      - hostpath-storage
+      - ingress
+      - registry
+      - metallb:10.64.140.43-10.64.140.49
+
+host:
+  snaps:
+    charmcraft:
+    jq:
+    yq:
+    rockcraft:
