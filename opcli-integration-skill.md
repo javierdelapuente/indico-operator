@@ -93,7 +93,7 @@ providers:
     addons:
       - hostpath-storage
       - dns
-      - registry   # required for opcli provision load
+      - metallb:10.64.140.43-10.64.140.49
 
 host:
   snaps:
@@ -119,7 +119,6 @@ providers:
       - dns
       - hostpath-storage
       - ingress
-      - registry
       - metallb:10.64.140.43-10.64.140.49
 
 host:
@@ -157,11 +156,32 @@ backends:
 
 ### 6. Validate locally
 
+**Sanity checks (no environment needed):**
 ```bash
 opcli artifacts matrix    # verify build matrix
 opcli spread tasks        # verify CI test matrix (runner labels appear here)
 opcli spread expand       # inspect the fully expanded spread.yaml
-opcli pytest expand       # verify the tox command assembled from artifacts-generated.yaml
+```
+
+**Path A — without spread (direct tox run):**
+```bash
+opcli artifacts build                        # build charm + rocks → artifacts-generated.yaml
+opcli provision run                          # concierge prepare (installs Juju, MicroK8s, snaps)
+opcli provision registry                     # deploy local OCI registry at localhost:32000
+opcli provision load                         # push rock images into the registry
+eval "$(opcli pytest expand -- -k <test>)"  # run integration tests via tox
+```
+
+**Path B — with spread (full CI simulation, recommended):**
+```bash
+opcli artifacts build
+opcli spread run -- local:ubuntu-24.04:tests/integration/run:<test>
+```
+Spread creates a fresh LXD VM, provisions it end-to-end (concierge + registry + rock load), runs the tests, then destroys the VM.
+
+After path A, restore the environment:
+```bash
+sudo concierge restore
 ```
 
 ### 7. Create `.github/workflows/ci.yaml`
@@ -229,6 +249,14 @@ before the upload completes.
 ```
 Rock images are separate OCI artifacts referenced via `artifacts.yaml`; they must
 never be packaged inside the charm.
+
+### Tests requiring secrets fail in CI
+
+Some test modules (e.g. `test_saml`) require credentials or secrets that are not
+available in standard CI environments. These tests will fail with a missing
+argument error or be skipped. This is expected — pass the required secrets via
+GitHub Actions secrets and forward them to the workflow if you need to enable
+these tests. Otherwise, their failure can be treated as known/acceptable.
 
 ### `artifacts-generated.yaml` extra fields in resources
 
