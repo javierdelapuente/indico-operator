@@ -117,7 +117,7 @@ host:
 
 Key notes:
 - The `registry` addon is **required** so `opcli provision load` can push rock images to `localhost:32000`.
-- With **Juju 2.9**, you must pass `--config caas-image-repo=jujusolutions` via `extra-bootstrap-args`. Without it, Juju 2.9 reads an invalid image repo from MicroK8s's containerd config and fails with `invalid reference format` when creating the controller StatefulSet.
+- With **Juju 2.9**, you must pass `--config caas-image-repo=jujusolutions` via `extra-bootstrap-args`. Without it, bootstrap fails with `invalid reference format` (see Known Issues below).
 - The MicroK8s `channel: 1.29/stable` keeps classic confinement, which is compatible with Juju 2.9 (the default `1.35-strict/stable` also works once `caas-image-repo` is set, but was not separately validated).
 
 For machine charms add an `lxd:` provider block.
@@ -171,13 +171,24 @@ jobs:
 
 ### Juju 2.9 bootstrap fails with `invalid reference format`
 
-Juju 2.9 reads MicroK8s's containerd config to determine the image repository and
-can construct an invalid Docker image reference, causing the controller bootstrap to
-fail at `creating statefulset for controller: invalid reference format`.
+**Root cause (confirmed):** Canonical's official Juju 2.9 snap is built with the
+Go linker flag `-X ...podcfg.JujudOCINamespace=` (empty string), deliberately
+overriding the source-code default of `"jujusolutions"`. This forces an empty
+OCI namespace. When `caas-image-repo` is not set, Juju constructs `/juju-db` (a
+path starting with `/`) as the image reference, which is rejected by Docker's
+reference parser as `invalid reference format`.
+
+Error stack trace:
+```
+creating statefulset for controller: invalid reference format
+  caas/kubernetes/provider.buildContainerSpecForController.func1:1244
+  cloudconfig/podcfg.tagImagePath:113
+  reference.Parse("/juju-db")  ← the leading "/" makes it invalid
+```
 
 **Fix**: pass `--config caas-image-repo=jujusolutions` via `extra-bootstrap-args`
-in `concierge.yaml` (see step 4 above). This explicitly sets the OCI namespace and
-bypasses the bad detection logic.
+in `concierge.yaml` (see step 4 above). This explicitly sets the OCI namespace so
+Juju uses `jujusolutions/juju-db:4.4.30` (valid) instead of `/juju-db` (invalid).
 
 ### Rock images not loaded into registry (`opcli provision load` skipped)
 
