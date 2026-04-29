@@ -116,7 +116,7 @@ host:
 ```
 
 Key notes:
-- The `registry` addon is **required** so `opcli provision load` can push rock images to `localhost:32000`.
+- Do **not** add `registry` to the MicroK8s `addons:` list — `opcli provision registry` (called by both spread's generated `prepare:` and the manual non-spread path) deploys it. Adding it to concierge.yaml is redundant.
 - With **Juju 2.9**, you must pass `--config caas-image-repo=jujusolutions` via `extra-bootstrap-args`. Without it, bootstrap fails with `invalid reference format` (see Known Issues below).
 - The MicroK8s `channel: 1.29/stable` keeps classic confinement, which is compatible with Juju 2.9 (the default `1.35-strict/stable` also works once `caas-image-repo` is set, but was not separately validated).
 
@@ -193,10 +193,10 @@ Juju uses `jujusolutions/juju-db:4.4.30` (valid) instead of `/juju-db` (invalid)
 ### Rock images not loaded into registry (`opcli provision load` skipped)
 
 The `opcli provision load` step only runs if `localhost:32000/v2/` is reachable.
-Without the MicroK8s `registry` addon, this check fails and images are never pushed,
-so `opcli pytest expand` falls back to local `.rock` file paths that Juju cannot use.
-
-**Fix**: add `registry` to the MicroK8s `addons:` list in `concierge.yaml`.
+The registry is deployed by `opcli provision registry` — called automatically in
+spread's generated `prepare:` section, and explicitly in the manual (non-spread)
+path. Do **not** add `registry` to the MicroK8s `addons:` in `concierge.yaml`;
+that is redundant and was an earlier mistake.
 
 ### `artifacts-generated.yaml` extra fields in resources
 
