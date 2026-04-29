@@ -129,15 +129,16 @@ For machine charms add an `lxd:` provider block.
 opcli spread init
 ```
 
-Then add the `runner:` label for your self-hosted GitHub Actions runner to the
-generated `spread.yaml`:
+Then set the `runner:` label in the generated `spread.yaml` to match your repo's
+GitHub Actions runner. Use `ubuntu-latest` for GitHub-hosted runners, or
+`[self-hosted, <label>]` for self-hosted:
 
 ```yaml
 backends:
   integration-test:
     systems:
     - ubuntu-24.04:
-        runner: [self-hosted, edge]   # adjust to your runner labels
+        runner: ubuntu-latest   # or [self-hosted, edge] for self-hosted runners
 ```
 
 ### 6. Validate locally
@@ -224,8 +225,9 @@ opcli's Pydantic model rejects this with `Extra inputs are not permitted`.
 ### `spread tasks` `"ubuntu-latest"` default
 
 If no `runner:` is specified in `spread.yaml`, `opcli spread tasks` emits
-`"ubuntu-latest"` for every test. Integration tests that need MicroK8s or LXD
-**must** run on self-hosted runners — set the `runner:` field.
+`"ubuntu-latest"` for every test. This is actually the correct default for
+GitHub-hosted runners. Only override with `[self-hosted, <label>]` if your repo
+requires self-hosted runners (e.g. for arm64 builds or privileged LXD access).
 
 ### `opcli spread tasks` not in README
 

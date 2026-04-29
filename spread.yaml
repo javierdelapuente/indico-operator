@@ -5,7 +5,7 @@ backends:
   integration-test:
     systems:
     - ubuntu-24.04:
-        runner: [self-hosted, edge]
+        runner: ubuntu-latest
 environment:
   SUDO_USER: ubuntu
   LANG: C.UTF-8
