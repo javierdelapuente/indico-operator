@@ -11,7 +11,7 @@ How to integrate an operator repository with
 | File | Action | Notes |
 |------|--------|-------|
 | `artifacts.yaml` | **Create** | Declares charms, rocks, snaps. |
-| `artifacts-generated.yaml` | **Modify** | Remove legacy `file:` fields from charm resources. |
+| `artifacts-generated.yaml` | **Modify** | Remove legacy `file:` fields; add to `.gitignore` (build output, not committed). |
 | `.jujuignore` | **Modify** | Add `*.rock` to exclude rock files from charm package. |
 | `concierge.yaml` | **Create** | Declarative env provisioning (Juju, MicroK8s/LXD, snaps). |
 | `spread.yaml` | **Create** | Virtual `integration-test` backend with runner labels. |
@@ -42,10 +42,24 @@ resources:
     rock: my-rock   # must match a name under rocks:
 ```
 
-### 3. Fix `artifacts-generated.yaml` (if it already exists)
+### 3. Fix `artifacts-generated.yaml` (if it already exists) and gitignore it
 
-Remove any `file:` fields from charm resources — they are no longer valid.
-Resources should only carry `type:` and `rock:`:
+`artifacts-generated.yaml` is **build output** — it must not be committed.
+Add it to `.gitignore`:
+
+```
+artifacts-generated.yaml
+```
+
+If an old copy already exists in the repo, remove it:
+
+```bash
+git rm --cached artifacts-generated.yaml
+```
+
+If the existing file has `file:` fields on charm resources, those are no longer
+valid (opcli's Pydantic model uses `extra=forbidden`). Remove them — resources
+should only carry `type:` and `rock:`:
 
 ```yaml
 # Wrong (old format):
