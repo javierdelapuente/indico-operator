@@ -12,6 +12,7 @@ How to integrate an operator repository with
 |------|--------|-------|
 | `artifacts.yaml` | **Create** | Declares charms, rocks, snaps. |
 | `artifacts-generated.yaml` | **Modify** | Remove legacy `file:` fields from charm resources. |
+| `.jujuignore` | **Modify** | Add `*.rock` to exclude rock files from charm package. |
 | `concierge.yaml` | **Create** | Declarative env provisioning (Juju, MicroK8s/LXD, snaps). |
 | `spread.yaml` | **Create** | Virtual `integration-test` backend with runner labels. |
 | `tests/integration/run/task.yaml` | **Create** | Spread task that invokes `opcli pytest expand`. |
@@ -198,6 +199,22 @@ spread's generated `prepare:` section, and explicitly in the manual (non-spread)
 path. Do **not** add `registry` to the MicroK8s `addons:` in `concierge.yaml`;
 that is redundant and was an earlier mistake.
 
+### Rock files bundled in charm package (836MB charm, EOF on upload)
+
+If a repo has `.rock` files in or under the project root (e.g. `indico_rock/` or
+`nginx_rock/`), charmcraft will bundle them into the `.charm` zip unless excluded.
+The resulting charm can be 800MB+, causing Juju's charm upload API to return EOF
+before the upload completes.
+
+**Symptom**: `POST ".../charms?...": EOF` from the Juju API during `juju deploy`.
+
+**Fix**: add `*.rock` to `.jujuignore`:
+```
+*.rock
+```
+Rock images are separate OCI artifacts referenced via `artifacts.yaml`; they must
+never be packaged inside the charm.
+
 ### `artifacts-generated.yaml` extra fields in resources
 
 Old-style `artifacts-generated.yaml` files may have `file:` on resource entries.
@@ -227,8 +244,13 @@ also absent from the README. Documentation gap in `operator-ci-poc`.
 
 - [ ] `artifacts.yaml` generated and rock links added
 - [ ] `artifacts-generated.yaml` cleaned of legacy `file:` resource fields
+- [ ] `.jujuignore` updated: add `*.rock` (and `*.charm`) to prevent bundling artifacts
 - [ ] `concierge.yaml` created with correct providers and snaps
 - [ ] `spread.yaml` generated and runner labels set
 - [ ] `tests/integration/run/task.yaml` generated
 - [ ] All `opcli` local validation commands pass (matrix, tasks, expand, pytest expand)
+- [ ] `opcli artifacts build` succeeds and produces a reasonably-sized charm (< 50MB)
+- [ ] `opcli provision run` + `opcli provision registry` + `opcli provision load` succeeds
+- [ ] `eval "$(opcli pytest expand -- -k <test>)"` passes at least one test
+- [ ] `opcli spread run` passes at least one test
 - [ ] `.github/workflows/ci.yaml` created
