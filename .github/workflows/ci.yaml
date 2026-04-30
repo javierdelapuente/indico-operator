@@ -7,7 +7,7 @@ on:
 
 jobs:
   integration-test:
-    uses: javierdelapuente/operator-ci-poc/.github/workflows/integration-test.yml@2208adf2596654a42e17795c3d1a40b5981d354f
+    uses: javierdelapuente/operator-ci-poc/.github/workflows/integration-test.yml@main
     permissions:
       contents: read
       packages: write
