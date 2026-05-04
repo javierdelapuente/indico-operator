@@ -11,6 +11,8 @@ __pycache__/
 .mypy_cache
 *.egg-info/
 */*.rock
+.opcli-spread-*/
+.spread-reuse.*.yaml
 
 # BEGIN VALE WORKFLOW IGNORE
 .vale/styles/*
@@ -24,3 +26,4 @@ __pycache__/
 !.vale/styles/config/vocabularies/local
 # END VALE WORKFLOW IGNORE
 
+artifacts-generated.yaml

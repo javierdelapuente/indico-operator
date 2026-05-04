@@ -1,0 +1,31 @@
+project: indico-operator
+path: /home/ubuntu/proj
+kill-timeout: 60m
+backends:
+  integration-test:
+    systems:
+    - ubuntu-24.04:
+        runner: ubuntu-latest
+environment:
+  SUDO_USER: ubuntu
+  LANG: C.UTF-8
+  LANGUAGE: en
+  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge.yaml}")'
+  OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+exclude:
+- .git
+- .tox
+- .venv
+- .*_cache
+suites:
+  tests/integration/:
+    summary: integration tests
+    backends:
+    - integration-test
+    environment:
+      MODULE/test_actions: test_actions
+      MODULE/test_charm: test_charm
+      MODULE/test_loki: test_loki
+      MODULE/test_s3: test_s3
+      MODULE/test_saml: test_saml
+      TOX_ENV: ''
